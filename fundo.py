@@ -2,205 +2,165 @@ import pygame
 from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
-import math
 
-# Configurações de Tela
-DISPLAY_WIDTH = 1200
-DISPLAY_HEIGHT = 800
+# ================= CONFIGURAÇÕES =================
+# As escalas (raio, distância) não são reais para permitir visualização em tela.
+PLANETAS = [
+    {"nome": "Mercurio", "raio": 0.4, "dist": 6,  "vel": 4.5, "cor": (0.7, 0.7, 0.7)},
+    {"nome": "Venus",    "raio": 0.6, "dist": 9,  "vel": 3.5, "cor": (1.0, 0.8, 0.2)},
+    {"nome": "Terra",    "raio": 0.6, "dist": 12, "vel": 2.5, "cor": (0.0, 0.0, 1.0)},
+    {"nome": "Marte",    "raio": 0.5, "dist": 15, "vel": 2.0, "cor": (1.0, 0.2, 0.0)},
+    {"nome": "Jupiter",  "raio": 1.4, "dist": 22, "vel": 1.2, "cor": (0.9, 0.6, 0.4)},
+    {"nome": "Saturno",  "raio": 1.2, "dist": 30, "vel": 0.9, "cor": (0.8, 0.7, 0.5)},
+    {"nome": "Urano",    "raio": 0.9, "dist": 38, "vel": 0.6, "cor": (0.4, 0.9, 0.9)},
+    {"nome": "Netuno",   "raio": 0.9, "dist": 45, "vel": 0.4, "cor": (0.1, 0.1, 0.8)},
+]
 
-# Estrutura para armazenar IDs de texturas
-textures = {}
+# Configuração da Lua
+LUA_TERRA = {"raio": 0.2, "dist": 1.8, "vel": 10.0, "cor": (0.8, 0.8, 0.8)}
 
-def load_texture(filename, texture_name):
-    """ Carrega uma imagem e a transforma em textura OpenGL """
-    try:
-        texture_surface = pygame.image.load(filename)
-        texture_data = pygame.image.tostring(texture_surface, "RGB", 1)
-        width = texture_surface.get_width()
-        height = texture_surface.get_height()
+# ================= FUNÇÕES AUXILIARES =================
+def desenhar_esfera(raio, cor):
+    """Desenha uma esfera sólida com a cor especificada."""
+    glColor3fv(cor)
+    quadric = gluNewQuadric()
+    # GLU_FILL garante que ela seja sólida e reaja à luz
+    gluQuadricDrawStyle(quadric, GLU_FILL) 
+    # Gerar normais é crucial para a iluminação funcionar na esfera
+    gluQuadricNormals(quadric, GLU_SMOOTH) 
+    gluSphere(quadric, raio, 32, 32)
+    gluDeleteQuadric(quadric)
 
-        tex_id = glGenTextures(1)
-        glBindTexture(GL_TEXTURE_2D, tex_id)
-        
-        # Parâmetros da textura
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture_data)
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        
-        textures[texture_name] = tex_id
-        print(f"Textura '{filename}' carregada com sucesso.")
-    except Exception as e:
-        print(f"Erro ao carregar textura {filename}: {e}")
-        textures[texture_name] = None
+def desenhar_anel_saturno(raio_interno, raio_externo, cor):
+    """Desenha um disco plano com um buraco no meio."""
+    glColor3fv(cor)
+    quadric = gluNewQuadric()
+    gluQuadricDrawStyle(quadric, GLU_FILL)
+    gluQuadricNormals(quadric, GLU_FLAT)
+    # gluDisk desenha no plano XY (z=0)
+    gluDisk(quadric, raio_interno, raio_externo, 40, 1)
+    gluDeleteQuadric(quadric)
 
-def init_gl():
-    """ Configuração inicial do OpenGL """
-    glEnable(GL_DEPTH_TEST) # Habilita profundidade (Z-buffer)
-    glEnable(GL_TEXTURE_2D) # Habilita texturas
+def init_opengl():
+    """Configurações iniciais do estado do OpenGL"""
+    glClearColor(0.0, 0.0, 0.0, 1.0) # Fundo preto
+    glEnable(GL_DEPTH_TEST)          # Z-buffer (profundidade)
     
-    # Configuração de Luz
+    # --- Configuração de Iluminação ---
     glEnable(GL_LIGHTING)
     glEnable(GL_LIGHT0)
+    
+    # GL_COLOR_MATERIAL faz com que o comando glColor afete 
+    # as propriedades difusas e ambientes do material do objeto.
     glEnable(GL_COLOR_MATERIAL)
-    
-    # Luz ambiente fraca e difusa forte
-    glLightfv(GL_LIGHT0, GL_AMBIENT, [0.2, 0.2, 0.2, 1.0])
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, [1.0, 1.0, 1.0, 1.0])
-    
-    # Cor do material
     glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE)
-    
-    gluPerspective(45, (DISPLAY_WIDTH / DISPLAY_HEIGHT), 0.1, 100.0)
-    
-    # Posição da Câmera (olhando de cima e inclinado)
-    gluLookAt(0, 30, 40, 0, 0, 0, 0, 1, 0)
 
-def draw_sphere(radius, texture_name):
-    """ Desenha uma esfera com textura """
-    quadric = gluNewQuadric()
-    
-    if textures.get(texture_name):
-        glEnable(GL_TEXTURE_2D)
-        glBindTexture(GL_TEXTURE_2D, textures[texture_name])
-        gluQuadricTexture(quadric, GL_TRUE)
-        glColor3f(1, 1, 1) # Reset cor para branco para não tingir a textura
-    else:
-        glDisable(GL_TEXTURE_2D)
-        # Cores de fallback caso não haja textura
-        if texture_name == 'sol': glColor3f(1, 1, 0)
-        elif texture_name == 'terra': glColor3f(0, 0, 1)
-        else: glColor3f(0.5, 0.5, 0.5)
+    # Parâmetros da luz 0 (Luz branca intensa)
+    glLightfv(GL_LIGHT0, GL_AMBIENT, [0.1, 0.1, 0.1, 1.0]) # Luz ambiente fraca
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, [1.2, 1.2, 1.2, 1.0]) # Luz direcional forte
+    glLightfv(GL_LIGHT0, GL_SPECULAR, [1.0, 1.0, 1.0, 1.0]) # Brilho especular
 
-    gluSphere(quadric, radius, 32, 32)
-    gluDeleteQuadric(quadric)
+    # Para os anéis e objetos planos ficarem melhores
+    glShadeModel(GL_SMOOTH)
 
-def draw_ring(inner, outer, texture_name):
-    """ Desenha um disco (para os anéis de Saturno) """
-    quadric = gluNewQuadric()
-    
-    if textures.get(texture_name):
-        glEnable(GL_TEXTURE_2D)
-        glBindTexture(GL_TEXTURE_2D, textures[texture_name])
-        gluQuadricTexture(quadric, GL_TRUE)
-    else:
-        glDisable(GL_TEXTURE_2D)
-        glColor3f(0.8, 0.8, 0.6)
-
-    # Rotaciona para o anel ficar plano
-    glPushMatrix()
-    glRotatef(90, 1, 0, 0) 
-    gluDisk(quadric, inner, outer, 32, 1)
-    glPopMatrix()
-    gluDeleteQuadric(quadric)
-
+# ================= LOOP PRINCIPAL =================
 def main():
     pygame.init()
-    pygame.display.set_mode((DISPLAY_WIDTH, DISPLAY_HEIGHT), DOUBLEBUF | OPENGL)
-    pygame.display.set_caption("Sistema Solar PyOpenGL")
+    display = (1024, 768)
+    pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
+    pygame.display.set_caption("Sistema Solar: Terra+Lua e Saturno+Anéis")
+
+    # Configuração da Câmera
+    glMatrixMode(GL_PROJECTION)
+    gluPerspective(45, (display[0]/display[1]), 0.1, 200.0)
     
-    init_gl()
+    glMatrixMode(GL_MODELVIEW)
+    # Posiciona a câmera: Olho(X,Y,Z), Centro(X,Y,Z), Vetor Cima(X,Y,Z)
+    # Olhando um pouco mais de cima para ver os anéis melhor
+    gluLookAt(0, 60, 80, 0, 0, 0, 0, 1, 0)
     
-    # Carregar Texturas (Substitua pelos nomes reais dos seus arquivos)
-    load_texture("sol.jpg", "sol")
-    load_texture("mercurio.jpg", "mercurio")
-    load_texture("venus.jpg", "venus")
-    load_texture("terra.jpg", "terra")
-    load_texture("lua.jpg", "lua")
-    load_texture("marte.jpg", "marte")
-    load_texture("jupiter.jpg", "jupiter")
-    load_texture("saturno.jpg", "saturno")
-    load_texture("anelSaturno.png", "aneis") # Textura para anéis
-    load_texture("urano.jpg", "urano")
-    load_texture("netuno.jpg", "netuno")
-
-    # Configuração dos Planetas: (Nome, Distancia, Raio, VelocidadeOrbita, Textura)
-    # Nota: Escalas não são reais para permitir visualização
-    planets_data = [
-        ("mercurio", 4.0, 0.3, 1.5, "mercurio"),
-        ("venus", 6.0, 0.5, 1.2, "venus"),
-        ("terra", 9.0, 0.5, 1.0, "terra"), # Índice 2 é a Terra (usado para Lua)
-        ("marte", 12.0, 0.4, 0.8, "marte"),
-        ("jupiter", 18.0, 1.2, 0.4, "jupiter"),
-        ("saturno", 24.0, 1.0, 0.3, "saturno"), # Índice 5 é Saturno
-        ("urano", 30.0, 0.8, 0.2, "urano"),
-        ("netuno", 36.0, 0.8, 0.1, "netuno")
-    ]
-
-    t = 0 # Tempo para animação
-
-    running = True
+    init_opengl()
+    
+    tempo_animacao = 0
     clock = pygame.time.Clock()
 
-    while running:
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                running = False
+                pygame.quit()
+                quit()
+            # Zoom simples com teclas para cima/baixo
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    running = False
+                if event.key == pygame.K_UP: glTranslate(0,0,2)
+                if event.key == pygame.K_DOWN: glTranslate(0,0,-2)
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        glMatrixMode(GL_MODELVIEW)
-        glLoadIdentity()
-        
-        # Reposiciona câmera a cada frame (caso queira adicionar movimento depois)
-        gluLookAt(0, 40, 50, 0, 0, 0, 0, 1, 0)
 
-        # 1. DESENHAR O SOL (Fonte de Luz)
-        # Desabilitamos a iluminação para desenhar o Sol, para que ele pareça
-        # "brilhar" por conta própria, ignorando sombras.
-        glDisable(GL_LIGHTING)
+        # ================= 1. O SOL (Emissor de Luz) =================
         glPushMatrix()
-        draw_sphere(2.5, "sol") # Sol um pouco maior
-        glPopMatrix()
-        
-        # Posiciona a luz OpenGL no centro (onde está o Sol)
-        # O 4º parâmetro 1.0 indica que é uma luz pontual (Positional Light)
-        glEnable(GL_LIGHTING)
+        # Define a posição da luz no centro (onde o sol será desenhado)
+        # O 4º parâmetro '1.0' indica que é uma luz posicional (pontual), não direcional.
         glLightfv(GL_LIGHT0, GL_POSITION, [0.0, 0.0, 0.0, 1.0])
+        
+        # Faz o sol "brilhar" (emissão própria) para não ficar sombreado por ele mesmo
+        glMaterialfv(GL_FRONT, GL_EMISSION, [1.0, 0.9, 0.2, 1.0])
+        desenhar_esfera(3.5, (1.0, 0.8, 0.2)) 
+        # Desliga a emissão para os próximos objetos
+        glMaterialfv(GL_FRONT, GL_EMISSION, [0.0, 0.0, 0.0, 1.0])
+        glPopMatrix()
 
-        # 2. DESENHAR PLANETAS
-        for i, p_data in enumerate(planets_data):
-            name, dist, radius, speed, tex = p_data
+        # ================= 2. OS PLANETAS =================
+        for planeta in PLANETAS:
+            glPushMatrix() # [PILHA: SOL] Salva o centro do universo
             
-            angle = t * speed
+            # --- Órbita do Planeta ---
+            angulo_planeta = (tempo_animacao * planeta["vel"]) % 360
+            glRotate(angulo_planeta, 0, 1, 0) # Gira em torno do Sol (eixo Y)
+            glTranslate(planeta["dist"], 0, 0) # Move para a distância orbital
             
-            glPushMatrix()
-            
-            # Translação orbital (Girar o "universo" para posicionar o planeta)
-            glRotatef(angle, 0, 1, 0)
-            glTranslatef(dist, 0, 0)
-            
-            # Rotação do próprio planeta (spin)
-            glPushMatrix() # Salva a posição antes do spin
-            glRotatef(t * 20, 0, 1, 0)
-            draw_sphere(radius, tex)
-            glPopMatrix() # Volta para o centro do planeta (sem spin) para desenhar filhos
+            # --- Desenha o Planeta ---
+            # Neste momento, a origem (0,0,0) local é o centro do planeta atual
+            desenhar_esfera(planeta["raio"], planeta["cor"])
 
-            # --- CASOS ESPECIAIS ---
-            
-            # A) LUA (Orbitando a Terra)
-            if name == "terra":
-                # Já estamos na posição da Terra. Vamos nos mover relativo a ela.
-                glRotatef(t * 3, 0, 1, 0) # Orbita da lua
-                glTranslatef(1.2, 0, 0)   # Distancia Lua-Terra
-                draw_sphere(0.15, "lua")
-            
-            # B) ANÉIS DE SATURNO
-            if name == "saturno":
-                # Anéis
-                glPushMatrix()
-                glRotatef(45, 1, 0, 0) # Inclinação dos anéis
-                draw_ring(1.2, 2.0, "aneis")
-                glPopMatrix()
+            # ================= 3. A LUA DA TERRA =================
+            ### NOVO: Lógica da Lua ###
+            if planeta["nome"] == "Terra":
+                # Estamos no centro da Terra agora. Vamos criar uma nova "camada" na pilha.
+                glPushMatrix() # [PILHA: SOL -> TERRA]
+                
+                # Órbita da Lua (mais rápida que o planeta)
+                angulo_lua = (tempo_animacao * LUA_TERRA["vel"]) % 360
+                
+                # Gira em torno da Terra. Inclinei um pouco o eixo (1,1,0) para ficar mais interessante
+                glRotate(angulo_lua, 0.1, 1, 0) 
+                glTranslate(LUA_TERRA["dist"], 0, 0)
+                
+                desenhar_esfera(LUA_TERRA["raio"], LUA_TERRA["cor"])
+                
+                glPopMatrix() # [PILHA: SOL] Volta para o centro da Terra
 
-            glPopMatrix() # Volta para o centro do Sistema Solar (0,0,0)
+            # ================= 4. ANÉIS DE SATURNO =================
+            ### NOVO: Lógica dos Anéis ###
+            if planeta["nome"] == "Saturno":
+                # Estamos no centro de Saturno. Os anéis são estáticos em relação ao planeta.
+                glPushMatrix() # [PILHA: SOL -> SATURNO] Salva a orientação de Saturno
+                
+                # Inclina os anéis. gluDisk desenha no plano Z=0.
+                # Rotacionamos no eixo X para incliná-los em direção à câmera.
+                glRotate(45, 1, 0, 0) 
+                
+                # Raio interno um pouco maior que o planeta, raio externo maior ainda
+                desenhar_anel_saturno(planeta["raio"] + 0.3, planeta["raio"] + 1.5, (0.7, 0.6, 0.4))
+                
+                glPopMatrix() # [PILHA: SOL] Restaura a orientação
+            
+            glPopMatrix() # [PILHA: VAZIA] Volta para o centro do Sol para o próximo planeta
 
-        t += 0.5 # Incrementa tempo
+        # Atualiza tempo
+        tempo_animacao += 0.5
+        
         pygame.display.flip()
         clock.tick(60)
-
-    pygame.quit()
 
 if __name__ == "__main__":
     main()
