@@ -9,8 +9,8 @@ import math
 import fundo
 
 # ================= CONFIGURAÇÕES DO JOGO =================
-COLS = 5
-ROWS = 8
+COLS = 8        # <--- ALTERADO: Grade aumentada para 8 colunas
+ROWS = 8        # Mantido em 8 linhas (Total 8x8)
 CELL_SIZE = 4.0 
 GRID_Y_OFFSET = 5.0 
 
@@ -69,6 +69,7 @@ def desenhar_grade():
 
 def get_world_pos(gx, gz):
     """Converte coordenadas da grade (coluna, linha) para coordenadas 3D"""
+    # A matemática aqui centraliza a grade independente do tamanho de COLS
     wx = (gx - (COLS-1)/2.0) * CELL_SIZE
     wz = (gz - (ROWS-1)/2.0) * CELL_SIZE 
     return wx, GRID_Y_OFFSET, wz
@@ -76,7 +77,7 @@ def get_world_pos(gx, gz):
 def main():
     pygame.init()
     
-    # --- ALTERAÇÃO AQUI: AUMENTANDO A TELA PARA HD ---
+    # Configuração de tela HD
     largura = 1280
     altura = 720
     display = (largura, altura)
@@ -96,7 +97,7 @@ def main():
         if p["nome"] == "Marte": tex_meteoro = p["tex_id"]
 
     # Estado do Jogo
-    ship_x = 2 # Coluna (0-4)
+    ship_x = 4 # <--- ALTERADO: Posição inicial centralizada para a grade de 8 colunas (0 a 7)
     ship_z = 0 # Linha (0-7)
     meteoros = []
     
@@ -129,7 +130,7 @@ def main():
                 if event.key == pygame.K_LEFT and ship_x > 0: ship_x -= 1
                 if event.key == pygame.K_RIGHT and ship_x < COLS - 1: ship_x += 1
                 
-                # Movimentação Vertical (Invertido corretamente: UP vai pro fundo, DOWN vem pra frente)
+                # Movimentação Vertical
                 if event.key == pygame.K_UP and ship_z > 0: ship_z -= 1
                 if event.key == pygame.K_DOWN and ship_z < ROWS - 1: ship_z += 1
 
