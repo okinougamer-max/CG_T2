@@ -75,8 +75,12 @@ def get_world_pos(gx, gz):
 
 def main():
     pygame.init()
-    largura, altura = 800, 600
+    
+    # --- ALTERAÇÃO AQUI: AUMENTANDO A TELA PARA HD ---
+    largura = 1280
+    altura = 720
     display = (largura, altura)
+    
     pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
     pygame.display.set_caption("Space Dodge - 30 Segundos!")
 
@@ -125,10 +129,8 @@ def main():
                 if event.key == pygame.K_LEFT and ship_x > 0: ship_x -= 1
                 if event.key == pygame.K_RIGHT and ship_x < COLS - 1: ship_x += 1
                 
-                # Movimentação Vertical (CORRIGIDO)
-                # K_UP agora diminui o Z (vai para o fundo/cima da tela)
+                # Movimentação Vertical (Invertido corretamente: UP vai pro fundo, DOWN vem pra frente)
                 if event.key == pygame.K_UP and ship_z > 0: ship_z -= 1
-                # K_DOWN agora aumenta o Z (vem para frente/baixo da tela)
                 if event.key == pygame.K_DOWN and ship_z < ROWS - 1: ship_z += 1
 
         # --- LÓGICA ---
@@ -189,7 +191,7 @@ def main():
             fundo.desenhar_esfera_texturizada(1.0, tex_meteoro)
             glPopMatrix()
 
-        # 3. HUD
+        # 3. HUD (Ajusta posição baseado na largura/altura)
         if game_state == "PLAYING":
             desenhar_texto_hud(f"Tempo: {time_left}s", 10, altura - 40, display)
         elif game_state == "WON":
