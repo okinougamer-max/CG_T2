@@ -35,19 +35,25 @@ def desenhar_texto(texto, x, y, display, tamanho=32, cor=(255, 255, 255, 255)):
 
 def executar(display):
     """
-    Retorna:
-    "JOGAR" -> Inicia o jogo
-    "MAPA"  -> Visualiza o mapa
-    None    -> Sai do jogo
+    Retorna uma tupla: (COMANDO, TEMPO, NIVEL)
     """
     clock = pygame.time.Clock()
     tempo_fundo = 0
     largura, altura = display
     cx = largura // 2
 
-    # Opções do Menu
-    opcoes = ["JOGAR", "VISUALIZAR MAPA", "SAIR"]
-    selecionado = 0 # Índice da opção atual
+    # Estado do Menu
+    tempo_jogo = 30  # Tempo padrão
+    nivel_jogo = 1   # Nível padrão
+    
+    # Índices das opções
+    OP_JOGAR = 0
+    OP_TEMPO = 1
+    OP_NIVEL = 2
+    OP_MAPA = 3
+    OP_SAIR = 4
+    
+    selecionado = OP_JOGAR
 
     while True:
         clock.tick(60)
@@ -56,22 +62,42 @@ def executar(display):
         # --- INPUT ---
         for event in pygame.event.get():
             if event.type == QUIT:
-                return None
+                return None, 0, 1
+            
             if event.type == KEYDOWN:
                 if event.key == K_ESCAPE:
-                    return None
+                    return None, 0, 1
                 
-                # Navegação
+                # Navegação Cima/Baixo
                 if event.key == K_UP:
-                    selecionado = (selecionado - 1) % len(opcoes)
+                    selecionado = (selecionado - 1) % 5
                 if event.key == K_DOWN:
-                    selecionado = (selecionado + 1) % len(opcoes)
+                    selecionado = (selecionado + 1) % 5
                 
-                # Seleção
+                # Ajuste de Tempo
+                if selecionado == OP_TEMPO:
+                    if event.key == K_LEFT:
+                        tempo_jogo = max(5, tempo_jogo - 1)
+                    if event.key == K_RIGHT:
+                        tempo_jogo += 1
+                
+                # Ajuste de Nível (1 a 3)
+                if selecionado == OP_NIVEL:
+                    if event.key == K_LEFT:
+                        nivel_jogo = max(1, nivel_jogo - 1)
+                    if event.key == K_RIGHT:
+                        nivel_jogo = min(3, nivel_jogo + 1)
+
+                # Seleção (Enter)
                 if event.key == K_RETURN or event.key == K_KP_ENTER:
-                    if selecionado == 0: return "JOGAR"
-                    if selecionado == 1: return "MAPA"
-                    if selecionado == 2: return None
+                    if selecionado == OP_JOGAR:
+                        return "JOGAR", tempo_jogo, nivel_jogo
+                    if selecionado == OP_TEMPO or selecionado == OP_NIVEL:
+                        selecionado = OP_JOGAR 
+                    if selecionado == OP_MAPA:
+                        return "MAPA", 0, 1
+                    if selecionado == OP_SAIR:
+                        return None, 0, 1
 
         # --- DESENHO ---
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -90,9 +116,16 @@ def executar(display):
         desenhar_texto("SPACE DODGE", cx - 180, altura - 150, display, 70, (255, 200, 50, 255))
         
         # 3. Opções
+        opcoes_lista = [
+            "JOGAR",
+            f"< TEMPO: {tempo_jogo}s >",
+            f"< NIVEL: {nivel_jogo} >",
+            "VISUALIZAR MAPA",
+            "SAIR"
+        ]
+
         y_start = altura // 2
-        for i, op in enumerate(opcoes):
-            # Se for a opção selecionada, pinta de Verde, senão Branco
+        for i, texto in enumerate(opcoes_lista):
             if i == selecionado:
                 cor = (0, 255, 0, 255)
                 prefixo = "> "
@@ -100,9 +133,20 @@ def executar(display):
                 cor = (200, 200, 200, 255)
                 prefixo = "  "
             
-            desenhar_texto(prefixo + op, cx - 100, y_start - (i * 50), display, 40, cor)
+            offset_x = 100
+            if i == OP_TEMPO or i == OP_NIVEL: offset_x = 120 
+
+            desenhar_texto(prefixo + texto, cx - offset_x, y_start - (i * 50), display, 40, cor)
 
         # Instruções
-        desenhar_texto("Use SETAS e ENTER", cx - 100, 50, display, 24, (150, 150, 150, 255))
+        desenhar_texto("Use SETAS para ajustar Tempo e Nivel", cx - 180, 50, display, 24, (150, 150, 150, 255))
+        
+        # Descrição do nível atual (Feedback visual)
+        desc_nivel = ""
+        if nivel_jogo == 1: desc_nivel = "Nivel 1: Meteoros Verticais"
+        elif nivel_jogo == 2: desc_nivel = "Nivel 2: Verticais + Horizontais"
+        elif nivel_jogo == 3: desc_nivel = "Nivel 3: Velocidade Maxima!"
+        
+        desenhar_texto(desc_nivel, cx - 150, 80, display, 20, (100, 255, 255, 255))
 
         pygame.display.flip()
