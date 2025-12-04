@@ -278,10 +278,10 @@ def main():
     fundo.init_all_textures()
 
     while True:
-        comando, valor_tempo, nivel_escolhido = menu.executar(display)
+        comando, tempo, nivel = menu.executar(display)
 
         if comando == "JOGAR":
-            if not loop_jogo(display, valor_tempo, nivel_escolhido):
+            if not loop_jogo(display, tempo, nivel):
                 break
         
         elif comando == "MAPA":
