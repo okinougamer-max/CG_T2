@@ -8,13 +8,11 @@ import math
 import fundo
 import menu
 
-# ================= CONFIGURAÇÕES DO JOGO =================
 COLS = 8
 ROWS = 8
 CELL_SIZE = 4.0 
 GRID_Y_OFFSET = 5.0 
 
-# ================= FUNÇÕES AUXILIARES =================
 def desenhar_texto_hud(texto, x, y, display, cor=(255,255,255,255), tamanho=32):
     try:
         font = pygame.font.SysFont('arial', tamanho, bold=True)
@@ -32,11 +30,15 @@ def desenhar_texto_hud(texto, x, y, display, cor=(255,255,255,255), tamanho=32):
     glPushMatrix()
     glLoadIdentity()
     
+    glDisable(GL_DEPTH_TEST) 
     glEnable(GL_BLEND)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+    
     glRasterPos2d(x, y)
     glDrawPixels(w, h, GL_RGBA, GL_UNSIGNED_BYTE, text_data)
+    
     glDisable(GL_BLEND)
+    glEnable(GL_DEPTH_TEST)
     
     glMatrixMode(GL_PROJECTION)
     glPopMatrix()
@@ -46,7 +48,7 @@ def desenhar_texto_hud(texto, x, y, display, cor=(255,255,255,255), tamanho=32):
 def desenhar_grade():
     glDisable(GL_TEXTURE_2D)
     glDisable(GL_LIGHTING)
-    glColor3f(0.0, 1.0, 0.0)
+    glColor3f(0.0, 1.0, 0.0) 
     glLineWidth(1.0)
     
     largura_total = COLS * CELL_SIZE
@@ -67,53 +69,42 @@ def desenhar_grade():
     glEnd()
     
     glEnable(GL_LIGHTING)
-    glEnable(GL_TEXTURE_2D)
 
 def get_world_pos(gx, gz):
+    """Converte coordenadas da grade (0..7) para Mundo 3D."""
     wx = (gx - (COLS-1)/2.0) * CELL_SIZE
     wz = (gz - (ROWS-1)/2.0) * CELL_SIZE 
     return wx, GRID_Y_OFFSET, wz
 
 def desenhar_nave_triangulo(texture_id=None):
-    """Desenha a nave como um triangulo, com suporte a textura."""
-    # Configura estado da textura
     if texture_id:
         glEnable(GL_TEXTURE_2D)
         glBindTexture(GL_TEXTURE_2D, texture_id)
-        glColor3f(1.0, 1.0, 1.0) # Branco para não alterar as cores da textura
+        glColor3f(1.0, 1.0, 1.0) 
     else:
         glDisable(GL_TEXTURE_2D)
-        glColor3f(0.0, 1.0, 1.0) # Ciano se não houver textura
+        glColor3f(0.0, 1.0, 1.0) 
     
     glBegin(GL_TRIANGLES)
     
-    # Vertice frontal (Ponta da nave) - Topo da textura
     glNormal3f(0, 1, 0)
     if texture_id: glTexCoord2f(0.5, 1.0)
     glVertex3f(0.0, 0.0, -1.5)
     
-    # Vertice traseiro esquerdo - Canto inferior esquerdo da textura
     glNormal3f(0, 1, 0)
     if texture_id: glTexCoord2f(0.0, 0.0)
     glVertex3f(-1.0, 0.0, 1.5)
     
-    # Vertice traseiro direito - Canto inferior direito da textura
     glNormal3f(0, 1, 0)
     if texture_id: glTexCoord2f(1.0, 0.0)
     glVertex3f(1.0, 0.0, 1.5)
     
     glEnd()
-    
-    # IMPORTANTE: Desativamos a textura no final para não afetar outros objetos (como a grade)
-    # Mas lembre-se de reativar antes de desenhar objetos que precisam dela!
     glDisable(GL_TEXTURE_2D)
 
-# ================= MODO: VISUALIZAR MAPA =================
 def visualizar_mapa(display):
     clock = pygame.time.Clock()
-    cam_x = 0
-    cam_y = 30
-    cam_z = 60
+    cam_x, cam_y, cam_z = 0, 30, 60
     tempo_fundo = 0
 
     running = True
@@ -127,14 +118,12 @@ def visualizar_mapa(display):
                 if event.key == K_ESCAPE: return True 
 
         keys = pygame.key.get_pressed()
-        vel = 1.0
-        if keys[K_LEFT]:  cam_x -= vel
-        if keys[K_RIGHT]: cam_x += vel
-        if keys[K_UP]:    cam_z -= vel
-        if keys[K_DOWN]:  cam_z += vel
-        if keys[K_w]: cam_y -= vel 
-        if keys[K_s]: cam_y += vel 
-        cam_y = max(5, min(cam_y, 150))
+        if keys[K_LEFT]:  cam_x -= 1
+        if keys[K_RIGHT]: cam_x += 1
+        if keys[K_UP]:    cam_z -= 1
+        if keys[K_DOWN]:  cam_z += 1
+        if keys[K_w]: cam_y -= 1 
+        if keys[K_s]: cam_y += 1 
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glMatrixMode(GL_PROJECTION)
@@ -145,112 +134,83 @@ def visualizar_mapa(display):
         gluLookAt(cam_x, cam_y, cam_z, cam_x, 0, cam_z - 40, 0, 1, 0)
 
         fundo.desenhar_cenario(tempo_fundo)
+        
         desenhar_grade() 
+        
         desenhar_texto_hud("MODO OBSERVADOR", 10, display[1] - 40, display, (0, 255, 255, 255))
         desenhar_texto_hud("Setas: Mover | W/S: Zoom | ESC: Menu", 10, 20, display, (200, 200, 200, 255))
         pygame.display.flip()
 
-# ================= LOOP DO JOGO =================
 def loop_jogo(display, duracao_segundos, nivel):
-    # IDs de texturas (carregados no fundo.py)
     tex_meteoro = fundo.METEORO_CFG["tex_id"]
     tex_nave = fundo.NAVE_CFG["tex_id"]
 
-    # Loop de Reinício (Jogar Novamente)
     while True:
-        ship_x = 4
-        ship_z = 0
+        ship_x, ship_z = 4, 0
         meteoros = []
-        
         game_state = "PLAYING"
         start_ticks = pygame.time.get_ticks()
         last_meteor_time = 0
         
-        # Configuração de Dificuldade
-        meteor_spawn_interval = 800 
-        if nivel == 3:
-            meteor_spawn_interval = 400
-            
-        meteor_move_timer = 0
+        meteor_spawn_interval = 800 if nivel < 3 else 400
         meteor_move_interval = 200
+        meteor_move_timer = 0
         
         tempo_fundo = 0
         clock = pygame.time.Clock()
-        
-        restarting = False # Flag para controlar o reinício
+        restarting = False 
 
-        # Loop Principal do Frame
         while True:
             dt = clock.tick(60)
             tempo_fundo += 0.5
+            current_ticks = pygame.time.get_ticks()
             
-            # Lógica de Tempo (apenas se estiver jogando)
             if game_state == "PLAYING":
-                current_ticks = pygame.time.get_ticks()
-                elapsed_seconds = (current_ticks - start_ticks) / 1000.0
-                time_left = max(0, duracao_segundos - int(elapsed_seconds))
-            
-            # --- INPUT ---
+                elapsed = (current_ticks - start_ticks) / 1000.0
+                time_left = max(0, duracao_segundos - int(elapsed))
+                if time_left == 0: game_state = "WON"
+
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    return False 
-                
+                if event.type == pygame.QUIT: return False 
                 if event.type == pygame.KEYDOWN:
-                    # Controles durante o jogo
                     if game_state == "PLAYING":
-                        if event.key == pygame.K_ESCAPE: 
-                            return True # Volta ao menu
-                        
+                        if event.key == pygame.K_ESCAPE: return True
                         if event.key == pygame.K_LEFT and ship_x > 0: ship_x -= 1
                         if event.key == pygame.K_RIGHT and ship_x < COLS - 1: ship_x += 1
                         if event.key == pygame.K_UP and ship_z > 0: ship_z -= 1
                         if event.key == pygame.K_DOWN and ship_z < ROWS - 1: ship_z += 1
-                    
-                    # Controles na tela de Fim de Jogo
                     else:
-                        if event.key == pygame.K_ESCAPE:
-                            return True # Volta ao menu
+                        if event.key == pygame.K_ESCAPE: return True
                         if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
-                            restarting = True # Seta flag para reiniciar
+                            restarting = True
 
-            # Se pediu para reiniciar, quebra o loop interno e inicia o externo novamente
-            if restarting:
-                break
+            if restarting: break
 
-            # --- LÓGICA DO JOGO ---
             if game_state == "PLAYING":
-                if time_left == 0: game_state = "WON"
-                
-                # Spawn Meteoros
                 if current_ticks - last_meteor_time > meteor_spawn_interval:
                     col_spawn = random.randint(0, COLS - 1)
                     meteoros.append({'x': col_spawn, 'z': ROWS, 'dx': 0, 'dz': -1})
                     
-                    if nivel >= 2:
-                        if random.choice([True, False]): 
-                            row_spawn = random.randint(0, ROWS - 1)
-                            if random.choice([True, False]):
-                                meteoros.append({'x': -1, 'z': row_spawn, 'dx': 1, 'dz': 0})
-                            else:
-                                meteoros.append({'x': COLS, 'z': row_spawn, 'dx': -1, 'dz': 0})
-
+                    if nivel >= 2 and random.choice([True, False]): 
+                        row_spawn = random.randint(0, ROWS - 1)
+                        meteoros.append({'x': -1 if random.choice([True, False]) else COLS, 
+                                         'z': row_spawn, 
+                                         'dx': 1 if random.choice([True, False]) else -1, 
+                                         'dz': 0})
                     last_meteor_time = current_ticks
                 
-                # Movimento
                 meteor_move_timer += dt
                 if meteor_move_timer > meteor_move_interval:
                     meteor_move_timer = 0
                     for m in meteoros:
                         m['x'] += m['dx']
                         m['z'] += m['dz']
-                    
                     meteoros = [m for m in meteoros if -2 <= m['z'] <= ROWS + 1 and -2 <= m['x'] <= COLS + 1]
                     
-                    for m in meteoros:
+                    for m in meteoros: # Colisao
                         if m['x'] == ship_x and m['z'] == ship_z:
                             game_state = "LOST"
 
-            # --- DESENHO ---
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
             glMatrixMode(GL_PROJECTION)
             glLoadIdentity()
@@ -260,47 +220,39 @@ def loop_jogo(display, duracao_segundos, nivel):
             gluLookAt(0, 30, 50, 0, 0, 0, 0, 1, 0)
 
             fundo.desenhar_cenario(tempo_fundo)
+            
             desenhar_grade()
             
-            # Nave (Triângulo com Textura)
             if game_state != "LOST" or (pygame.time.get_ticks() % 500 < 250):
                 nx, ny, nz = get_world_pos(ship_x, ship_z)
                 glPushMatrix()
                 glTranslate(nx, ny, nz)
+                # Animação suave de flutuação
                 glTranslate(0, math.sin(tempo_fundo*0.1)*0.2, 0) 
                 desenhar_nave_triangulo(tex_nave) 
                 glPopMatrix()
 
-            # Meteoros (Ativar textura explicitamente aqui!)
-            glEnable(GL_TEXTURE_2D)  # <--- CORREÇÃO AQUI
+            glEnable(GL_TEXTURE_2D) 
             for m in meteoros:
                 mx, my, mz = get_world_pos(m['x'], m['z'])
                 glPushMatrix()
                 glTranslate(mx, my, mz)
                 fundo.desenhar_esfera_texturizada(1.0, tex_meteoro)
                 glPopMatrix()
-            glDisable(GL_TEXTURE_2D)
+            glDisable(GL_TEXTURE_2D) # Desativa ao terminar
 
-            # HUD
             if game_state == "PLAYING":
                 desenhar_texto_hud(f"Tempo: {time_left}s | Nivel: {nivel}", 10, display[1] - 40, display)
             else:
-                # TELA DE FIM DE JOGO
-                centro_x = display[0] // 2
-                centro_y = display[1] // 2
-                
-                if game_state == "WON":
-                    desenhar_texto_hud("VITORIA!", centro_x - 80, centro_y + 50, display, (0, 255, 0, 255), 60)
-                elif game_state == "LOST":
-                    desenhar_texto_hud("GAME OVER", centro_x - 120, centro_y + 50, display, (255, 0, 0, 255), 60)
-                
-                # Opções de reinício
-                desenhar_texto_hud("[ENTER] Jogar Novamente", centro_x - 140, centro_y - 20, display, (255, 255, 255, 255), 32)
-                desenhar_texto_hud("[ESC] Voltar ao Menu", centro_x - 110, centro_y - 60, display, (200, 200, 200, 255), 24)
+                cx, cy = display[0] // 2, display[1] // 2
+                cor = (0, 255, 0, 255) if game_state == "WON" else (255, 0, 0, 255)
+                msg = "VITORIA!" if game_state == "WON" else "GAME OVER"
+                desenhar_texto_hud(msg, cx - 80, cy + 50, display, cor, 60)
+                desenhar_texto_hud("[ENTER] Jogar Novamente", cx - 140, cy - 20, display)
+                desenhar_texto_hud("[ESC] Voltar ao Menu", cx - 110, cy - 60, display, (200, 200, 200, 255), 24)
 
             pygame.display.flip()
 
-# ================= MAIN =================
 def main():
     pygame.init()
     display = (1280, 720)
@@ -308,22 +260,16 @@ def main():
     pygame.display.set_caption("Space Dodge")
 
     fundo.init_opengl()
-    fundo.init_all_textures()
+    fundo.init_all_textures() 
 
     while True:
         comando, tempo, nivel = menu.executar(display)
-
         if comando == "JOGAR":
-            if not loop_jogo(display, tempo, nivel):
-                break
-        
+            if not loop_jogo(display, tempo, nivel): break
         elif comando == "MAPA":
-            if not visualizar_mapa(display):
-                break
-        
+            if not visualizar_mapa(display): break
         elif comando is None:
             break
-
     pygame.quit()
 
 if __name__ == "__main__":

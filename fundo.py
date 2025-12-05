@@ -4,24 +4,19 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 import random
 import os
+from PIL import Image
 
-# Tenta importar PIL
-try:
-    from PIL import Image
-    PIL_AVAILABLE = True
-except ImportError:
-    PIL_AVAILABLE = False
-    print("AVISO: Pillow (PIL) não encontrado.")
 
-# ================= FUNÇÕES AUXILIARES =================
 def encontrar_arquivo(nome_arquivo):
     if os.path.exists(nome_arquivo): return nome_arquivo
+    
     caminho_assets = os.path.join("assets", nome_arquivo)
     if os.path.exists(caminho_assets): return caminho_assets
-    # Procura na pasta local se não achar em assets
+    
     dir_atual = os.path.dirname(os.path.abspath(__file__))
     caminho_completo = os.path.join(dir_atual, "assets", nome_arquivo)
     if os.path.exists(caminho_completo): return caminho_completo
+    
     return None
 
 def gerar_textura_procedural(cor_rgb, largura=64, altura=64):
@@ -30,38 +25,46 @@ def gerar_textura_procedural(cor_rgb, largura=64, altura=64):
     for _ in range(altura):
         for _ in range(largura):
             noise = random.randint(-30, 30)
-            data.extend([max(0, min(255, r_base + noise)), 
-                         max(0, min(255, g_base + noise)), 
-                         max(0, min(255, b_base + noise)), 255]) 
+            data.extend([
+                max(0, min(255, r_base + noise)), 
+                max(0, min(255, g_base + noise)), 
+                max(0, min(255, b_base + noise)), 
+                255
+            ]) 
     return data, largura, altura
 
 def load_texture(filename, cor_placeholder_rgb=None):
     texture_id = glGenTextures(1)
     glBindTexture(GL_TEXTURE_2D, texture_id)
+    
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
     
     img_data, width, height = None, 0, 0
     caminho_real = encontrar_arquivo(filename)
     loaded = False
 
-    if PIL_AVAILABLE and caminho_real:
+    if caminho_real:
         try:
             img = Image.open(caminho_real).convert("RGBA")
             img_data = img.tobytes("raw", "RGBA", 0, -1)
             width, height = img.size
             loaded = True
-        except: pass
+        except Exception as e:
+            print(f"Erro ao carregar textura {filename}: {e}")
     
-    if not loaded and cor_placeholder_rgb:
-         img_data, width, height = gerar_textura_procedural(cor_placeholder_rgb)
+    if not loaded:
+        print(f"Usando textura procedural para: {filename}")
+        if cor_placeholder_rgb is None: cor_placeholder_rgb = (0.5, 0.5, 0.5)
+        img_data, width, height = gerar_textura_procedural(cor_placeholder_rgb)
     
     if img_data:
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data)
     
     return texture_id
 
-# ================= CONFIGURAÇÕES DOS PLANETAS =================
 PLANETAS = [
     {"nome": "Mercurio", "raio": 0.4, "dist": 6,  "vel": 4.5, "cor_base": (0.7, 0.7, 0.7), "tex_file": "mercurio.jpg", "tex_id": None},
     {"nome": "Venus",    "raio": 0.6, "dist": 9,  "vel": 3.5, "cor_base": (1.0, 0.8, 0.2), "tex_file": "venus.png", "tex_id": None},
@@ -76,24 +79,30 @@ LUA_TERRA = {"raio": 0.2, "dist": 1.8, "vel": 10.0, "cor_base": (0.8, 0.8, 0.8),
 SOL_CFG = {"raio": 3.5, "cor_base": (1.0, 0.8, 0.2), "tex_file": "sol.png", "tex_id": None}
 ANEIS_SATURNO_CFG = {"tex_file": "anelSaturno.png", "tex_id": None, "cor_base": (0.7, 0.6, 0.4)}
 
-# === CONFIGURAÇÕES DA NAVE E METEORO ===
 NAVE_CFG = {"tex_file": "nave.jpg", "tex_id": None, "cor_base": (0.5, 0.5, 0.5)}
 METEORO_CFG = {"tex_file": "meteoro.jpg", "tex_id": None, "cor_base": (0.4, 0.4, 0.4)}
 
-# ================= DESENHO =================
 def desenhar_esfera_texturizada(raio, texture_id):
     glColor3f(1.0, 1.0, 1.0)
-    if texture_id: glBindTexture(GL_TEXTURE_2D, texture_id)
-    quadric = gluNewQuadric()
-    gluQuadricTexture(quadric, GL_TRUE) 
-    gluSphere(quadric, raio, 20, 20)
-    gluDeleteQuadric(quadric)
+    
+    if texture_id: 
+        glBindTexture(GL_TEXTURE_2D, texture_id)
+        quadric = gluNewQuadric()
+        gluQuadricTexture(quadric, GL_TRUE) 
+        gluSphere(quadric, raio, 20, 20)
+        gluDeleteQuadric(quadric)
+    else:
+        quadric = gluNewQuadric()
+        gluSphere(quadric, raio, 20, 20)
+        gluDeleteQuadric(quadric)
 
 def desenhar_anel_texturizado(raio_interno, raio_externo, texture_id):
     glEnable(GL_BLEND)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
     glColor4f(1.0, 1.0, 1.0, 0.9) 
+    
     if texture_id: glBindTexture(GL_TEXTURE_2D, texture_id)
+    
     quadric = gluNewQuadric()
     gluQuadricTexture(quadric, GL_TRUE)
     gluDisk(quadric, raio_interno, raio_externo, 40, 1)
@@ -111,35 +120,35 @@ def init_opengl():
 
 def init_all_textures():
     glEnable(GL_TEXTURE_2D)
+    
+    print("Carregando texturas...")
     SOL_CFG["tex_id"] = load_texture(SOL_CFG["tex_file"], SOL_CFG["cor_base"])
     LUA_TERRA["tex_id"] = load_texture(LUA_TERRA["tex_file"], LUA_TERRA["cor_base"])
     ANEIS_SATURNO_CFG["tex_id"] = load_texture(ANEIS_SATURNO_CFG["tex_file"], ANEIS_SATURNO_CFG["cor_base"])
     
-    # Carrega texturas da nave e meteoro
     NAVE_CFG["tex_id"] = load_texture(NAVE_CFG["tex_file"], NAVE_CFG["cor_base"])
     METEORO_CFG["tex_id"] = load_texture(METEORO_CFG["tex_file"], METEORO_CFG["cor_base"])
 
     for p in PLANETAS:
         p["tex_id"] = load_texture(p["tex_file"], p["cor_base"])
+    print("Texturas carregadas.")
 
 def desenhar_cenario(tempo_animacao):
-    """Desenha todo o sistema solar."""
     glPushMatrix()
     glEnable(GL_TEXTURE_2D)
 
-    # SOL
     glPushMatrix()
     glMaterialfv(GL_FRONT, GL_EMISSION, [1.0, 1.0, 1.0, 1.0]) 
     desenhar_esfera_texturizada(SOL_CFG["raio"], SOL_CFG["tex_id"]) 
     glMaterialfv(GL_FRONT, GL_EMISSION, [0.0, 0.0, 0.0, 1.0])
     glPopMatrix()
 
-    # PLANETAS
     for planeta in PLANETAS:
         glPushMatrix() 
         angulo_planeta = (tempo_animacao * planeta["vel"]) % 360
         glRotate(angulo_planeta, 0, 1, 0)
         glTranslate(planeta["dist"], 0, 0)
+        
         glPushMatrix() 
         glRotate(tempo_animacao * 2, 0, 1, 0) 
         desenhar_esfera_texturizada(planeta["raio"], planeta["tex_id"])
@@ -162,27 +171,3 @@ def desenhar_cenario(tempo_animacao):
     
     glDisable(GL_TEXTURE_2D)
     glPopMatrix()
-
-if __name__ == "__main__":
-    pygame.init()
-    display = (800, 600)
-    pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
-    pygame.display.set_caption("Teste do Fundo")
-    glMatrixMode(GL_PROJECTION)
-    gluPerspective(45, (display[0]/display[1]), 0.1, 100.0)
-    glMatrixMode(GL_MODELVIEW)
-    gluLookAt(0, 40, 60, 0, 0, 0, 0, 1, 0)
-    
-    init_opengl()
-    init_all_textures()
-    
-    tempo = 0
-    clock = pygame.time.Clock()
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT: pygame.quit(); quit()
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        desenhar_cenario(tempo)
-        tempo += 0.5
-        pygame.display.flip()
-        clock.tick(60)
