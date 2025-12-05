@@ -84,7 +84,7 @@ def desenhar_cenario(tempo):
         glRotate((tempo * p["vel"]) % 360, 0, 1, 0)
         glTranslate(p["dist"], 0, 0)
         
-        glPushMatrix() # Rotação do próprio planeta
+        glPushMatrix() # Rotação do planeta
         glRotate(tempo * 2, 0, 1, 0) 
         desenhar_esfera(p["raio"], p["id"])
         glPopMatrix()
