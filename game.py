@@ -76,45 +76,37 @@ def get_world_pos(gx, gz):
 
 def desenhar_nave_triangulo(texture_id=None):
     """Desenha a nave como um triangulo, com suporte a textura."""
+    # Configura estado da textura
     if texture_id:
         glEnable(GL_TEXTURE_2D)
         glBindTexture(GL_TEXTURE_2D, texture_id)
-        glColor3f(1.0, 1.0, 1.0) # Branco para mostrar a textura original
+        glColor3f(1.0, 1.0, 1.0) # Branco para não alterar as cores da textura
     else:
         glDisable(GL_TEXTURE_2D)
-        glColor3f(0.0, 1.0, 1.0) # Cor Ciano se não houver textura
-
-    # Desativa luz temporariamente para a nave brilhar (opcional)
-    # glDisable(GL_LIGHTING) 
+        glColor3f(0.0, 1.0, 1.0) # Ciano se não houver textura
     
     glBegin(GL_TRIANGLES)
     
-    # Vertice frontal (Ponta da nave)
-    # Mapeia para o topo central da imagem (0.5, 1.0)
+    # Vertice frontal (Ponta da nave) - Topo da textura
     glNormal3f(0, 1, 0)
     if texture_id: glTexCoord2f(0.5, 1.0)
     glVertex3f(0.0, 0.0, -1.5)
     
-    # Vertice traseiro esquerdo
-    # Mapeia para o canto inferior esquerdo (0.0, 0.0)
+    # Vertice traseiro esquerdo - Canto inferior esquerdo da textura
     glNormal3f(0, 1, 0)
     if texture_id: glTexCoord2f(0.0, 0.0)
     glVertex3f(-1.0, 0.0, 1.5)
     
-    # Vertice traseiro direito
-    # Mapeia para o canto inferior direito (1.0, 0.0)
+    # Vertice traseiro direito - Canto inferior direito da textura
     glNormal3f(0, 1, 0)
     if texture_id: glTexCoord2f(1.0, 0.0)
     glVertex3f(1.0, 0.0, 1.5)
     
     glEnd()
     
-    if texture_id:
-        glDisable(GL_TEXTURE_2D) # Limpa estado
-    else:
-        glEnable(GL_TEXTURE_2D)
-    
-    # glEnable(GL_LIGHTING)
+    # IMPORTANTE: Desativamos a textura no final para não afetar outros objetos (como a grade)
+    # Mas lembre-se de reativar antes de desenhar objetos que precisam dela!
+    glDisable(GL_TEXTURE_2D)
 
 # ================= MODO: VISUALIZAR MAPA =================
 def visualizar_mapa(display):
@@ -160,7 +152,7 @@ def visualizar_mapa(display):
 
 # ================= LOOP DO JOGO =================
 def loop_jogo(display, duracao_segundos, nivel):
-    # IDs de texturas
+    # IDs de texturas (carregados no fundo.py)
     tex_meteoro = fundo.METEORO_CFG["tex_id"]
     tex_nave = fundo.NAVE_CFG["tex_id"]
 
@@ -270,23 +262,24 @@ def loop_jogo(display, duracao_segundos, nivel):
             fundo.desenhar_cenario(tempo_fundo)
             desenhar_grade()
             
-            # Nave (AGORA TRIÂNGULO TEXTURIZADO)
+            # Nave (Triângulo com Textura)
             if game_state != "LOST" or (pygame.time.get_ticks() % 500 < 250):
                 nx, ny, nz = get_world_pos(ship_x, ship_z)
                 glPushMatrix()
                 glTranslate(nx, ny, nz)
                 glTranslate(0, math.sin(tempo_fundo*0.1)*0.2, 0) 
-                # Usa a função de triângulo, passando a textura da nave
                 desenhar_nave_triangulo(tex_nave) 
                 glPopMatrix()
 
-            # Meteoros (ESFERA TEXTURIZADA)
+            # Meteoros (Ativar textura explicitamente aqui!)
+            glEnable(GL_TEXTURE_2D)  # <--- CORREÇÃO AQUI
             for m in meteoros:
                 mx, my, mz = get_world_pos(m['x'], m['z'])
                 glPushMatrix()
                 glTranslate(mx, my, mz)
                 fundo.desenhar_esfera_texturizada(1.0, tex_meteoro)
                 glPopMatrix()
+            glDisable(GL_TEXTURE_2D)
 
             # HUD
             if game_state == "PLAYING":
