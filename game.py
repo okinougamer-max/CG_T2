@@ -8,12 +8,12 @@ import fundo
 import menu
 
 COLS, ROWS = 8, 8
-CELL_SIZE = 4.0 
+tamanho_quadrado = 4.0 
 GRID_Y = 5.0 
 
 def getposition(gx, gz):
-    wx = (gx - (COLS-1)/2.0) * CELL_SIZE
-    wz = (gz - (ROWS-1)/2.0) * CELL_SIZE 
+    wx = (gx - (COLS-1)/2.0) * tamanho_quadrado
+    wz = (gz - (ROWS-1)/2.0) * tamanho_quadrado 
     return wx, GRID_Y, wz
 
 def desenhar_nave(texture_id=None):
@@ -57,15 +57,15 @@ def visualizar_mapa(display):
         
         glDisable(GL_TEXTURE_2D); glColor3f(0, 1, 0)
         glBegin(GL_LINES)
-        sz = ROWS * CELL_SIZE
-        sx = COLS * CELL_SIZE
+        sz = ROWS * tamanho_quadrado
+        sx = COLS * tamanho_quadrado
         start_x, start_z = -sx/2, -sz/2
         for i in range(COLS + 1):
-            glVertex3f(start_x + i*CELL_SIZE, GRID_Y, start_z)
-            glVertex3f(start_x + i*CELL_SIZE, GRID_Y, start_z + sz)
+            glVertex3f(start_x + i*tamanho_quadrado, GRID_Y, start_z)
+            glVertex3f(start_x + i*tamanho_quadrado, GRID_Y, start_z + sz)
         for i in range(ROWS + 1):
-            glVertex3f(start_x, GRID_Y, start_z + i*CELL_SIZE)
-            glVertex3f(start_x + sx, GRID_Y, start_z + i*CELL_SIZE)
+            glVertex3f(start_x, GRID_Y, start_z + i*tamanho_quadrado)
+            glVertex3f(start_x + sx, GRID_Y, start_z + i*tamanho_quadrado)
         glEnd()
 
         menu.desenhar_texto("MODO OBSERVADOR", 10, display[1]-40, display, 32, (0,255,255,255))
@@ -145,10 +145,10 @@ def loop_jogo(display, duracao, nivel):
         
         glDisable(GL_TEXTURE_2D); glColor3f(0, 1, 0)
         glBegin(GL_LINES)
-        sz, sx = ROWS * CELL_SIZE, COLS * CELL_SIZE
+        sz, sx = ROWS * tamanho_quadrado, COLS * tamanho_quadrado
         st_x, st_z = -sx/2, -sz/2
-        for i in range(COLS+1): glVertex3f(st_x+i*CELL_SIZE, GRID_Y, st_z); glVertex3f(st_x+i*CELL_SIZE, GRID_Y, st_z+sz)
-        for i in range(ROWS+1): glVertex3f(st_x, GRID_Y, st_z+i*CELL_SIZE); glVertex3f(st_x+sx, GRID_Y, st_z+i*CELL_SIZE)
+        for i in range(COLS+1): glVertex3f(st_x+i*tamanho_quadrado, GRID_Y, st_z); glVertex3f(st_x+i*tamanho_quadrado, GRID_Y, st_z+sz)
+        for i in range(ROWS+1): glVertex3f(st_x, GRID_Y, st_z+i*tamanho_quadrado); glVertex3f(st_x+sx, GRID_Y, st_z+i*tamanho_quadrado)
         glEnd()
 
         if state != "Derrota" or (now % 500 < 250):
