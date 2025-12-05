@@ -18,6 +18,10 @@ def encontrar_arquivo(nome_arquivo):
     if os.path.exists(nome_arquivo): return nome_arquivo
     caminho_assets = os.path.join("assets", nome_arquivo)
     if os.path.exists(caminho_assets): return caminho_assets
+    # Procura na pasta local se não achar em assets
+    dir_atual = os.path.dirname(os.path.abspath(__file__))
+    caminho_completo = os.path.join(dir_atual, "assets", nome_arquivo)
+    if os.path.exists(caminho_completo): return caminho_completo
     return None
 
 def gerar_textura_procedural(cor_rgb, largura=64, altura=64):
@@ -72,6 +76,10 @@ LUA_TERRA = {"raio": 0.2, "dist": 1.8, "vel": 10.0, "cor_base": (0.8, 0.8, 0.8),
 SOL_CFG = {"raio": 3.5, "cor_base": (1.0, 0.8, 0.2), "tex_file": "sol.png", "tex_id": None}
 ANEIS_SATURNO_CFG = {"tex_file": "anelSaturno.png", "tex_id": None, "cor_base": (0.7, 0.6, 0.4)}
 
+# === CONFIGURAÇÕES DA NAVE E METEORO ===
+NAVE_CFG = {"tex_file": "nave.jpg", "tex_id": None, "cor_base": (0.5, 0.5, 0.5)}
+METEORO_CFG = {"tex_file": "meteoro.jpg", "tex_id": None, "cor_base": (0.4, 0.4, 0.4)}
+
 # ================= DESENHO =================
 def desenhar_esfera_texturizada(raio, texture_id):
     glColor3f(1.0, 1.0, 1.0)
@@ -106,6 +114,11 @@ def init_all_textures():
     SOL_CFG["tex_id"] = load_texture(SOL_CFG["tex_file"], SOL_CFG["cor_base"])
     LUA_TERRA["tex_id"] = load_texture(LUA_TERRA["tex_file"], LUA_TERRA["cor_base"])
     ANEIS_SATURNO_CFG["tex_id"] = load_texture(ANEIS_SATURNO_CFG["tex_file"], ANEIS_SATURNO_CFG["cor_base"])
+    
+    # Carrega texturas da nave e meteoro
+    NAVE_CFG["tex_id"] = load_texture(NAVE_CFG["tex_file"], NAVE_CFG["cor_base"])
+    METEORO_CFG["tex_id"] = load_texture(METEORO_CFG["tex_file"], METEORO_CFG["cor_base"])
+
     for p in PLANETAS:
         p["tex_id"] = load_texture(p["tex_file"], p["cor_base"])
 
@@ -150,7 +163,6 @@ def desenhar_cenario(tempo_animacao):
     glDisable(GL_TEXTURE_2D)
     glPopMatrix()
 
-# Permite rodar fundo.py sozinho para teste
 if __name__ == "__main__":
     pygame.init()
     display = (800, 600)

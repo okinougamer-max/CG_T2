@@ -74,27 +74,47 @@ def get_world_pos(gx, gz):
     wz = (gz - (ROWS-1)/2.0) * CELL_SIZE 
     return wx, GRID_Y_OFFSET, wz
 
-def desenhar_nave_triangulo():
-    """Desenha a nave como um triangulo simples."""
-    glDisable(GL_TEXTURE_2D) # Desativa texturas para usar cor solida
-    glDisable(GL_LIGHTING)   # Desativa luz para a cor ficar brilhante (opcional)
+def desenhar_nave_triangulo(texture_id=None):
+    """Desenha a nave como um triangulo, com suporte a textura."""
+    if texture_id:
+        glEnable(GL_TEXTURE_2D)
+        glBindTexture(GL_TEXTURE_2D, texture_id)
+        glColor3f(1.0, 1.0, 1.0) # Branco para mostrar a textura original
+    else:
+        glDisable(GL_TEXTURE_2D)
+        glColor3f(0.0, 1.0, 1.0) # Cor Ciano se não houver textura
+
+    # Desativa luz temporariamente para a nave brilhar (opcional)
+    # glDisable(GL_LIGHTING) 
     
     glBegin(GL_TRIANGLES)
-    glColor3f(0.0, 1.0, 1.0) # Cor Ciano (R, G, B)
     
     # Vertice frontal (Ponta da nave)
+    # Mapeia para o topo central da imagem (0.5, 1.0)
+    glNormal3f(0, 1, 0)
+    if texture_id: glTexCoord2f(0.5, 1.0)
     glVertex3f(0.0, 0.0, -1.5)
     
     # Vertice traseiro esquerdo
+    # Mapeia para o canto inferior esquerdo (0.0, 0.0)
+    glNormal3f(0, 1, 0)
+    if texture_id: glTexCoord2f(0.0, 0.0)
     glVertex3f(-1.0, 0.0, 1.5)
     
     # Vertice traseiro direito
+    # Mapeia para o canto inferior direito (1.0, 0.0)
+    glNormal3f(0, 1, 0)
+    if texture_id: glTexCoord2f(1.0, 0.0)
     glVertex3f(1.0, 0.0, 1.5)
     
     glEnd()
     
-    glEnable(GL_LIGHTING)    # Restaura iluminacao
-    glEnable(GL_TEXTURE_2D)  # Restaura texturas
+    if texture_id:
+        glDisable(GL_TEXTURE_2D) # Limpa estado
+    else:
+        glEnable(GL_TEXTURE_2D)
+    
+    # glEnable(GL_LIGHTING)
 
 # ================= MODO: VISUALIZAR MAPA =================
 def visualizar_mapa(display):
@@ -140,10 +160,9 @@ def visualizar_mapa(display):
 
 # ================= LOOP DO JOGO =================
 def loop_jogo(display, duracao_segundos, nivel):
-    # IDs de texturas (apenas meteoro sera usado agora)
-    tex_meteoro = None
-    for p in fundo.PLANETAS:
-        if p["nome"] == "Marte": tex_meteoro = p["tex_id"]
+    # IDs de texturas
+    tex_meteoro = fundo.METEORO_CFG["tex_id"]
+    tex_nave = fundo.NAVE_CFG["tex_id"]
 
     # Loop de Reinício (Jogar Novamente)
     while True:
@@ -251,17 +270,17 @@ def loop_jogo(display, duracao_segundos, nivel):
             fundo.desenhar_cenario(tempo_fundo)
             desenhar_grade()
             
-            # Nave (AGORA DESENHADA COMO UM TRIANGULO)
+            # Nave (AGORA TRIÂNGULO TEXTURIZADO)
             if game_state != "LOST" or (pygame.time.get_ticks() % 500 < 250):
                 nx, ny, nz = get_world_pos(ship_x, ship_z)
                 glPushMatrix()
                 glTranslate(nx, ny, nz)
                 glTranslate(0, math.sin(tempo_fundo*0.1)*0.2, 0) 
-                # fundo.desenhar_esfera_texturizada(1.2, tex_nave) # Antigo
-                desenhar_nave_triangulo() # Novo
+                # Usa a função de triângulo, passando a textura da nave
+                desenhar_nave_triangulo(tex_nave) 
                 glPopMatrix()
 
-            # Meteoros
+            # Meteoros (ESFERA TEXTURIZADA)
             for m in meteoros:
                 mx, my, mz = get_world_pos(m['x'], m['z'])
                 glPushMatrix()
