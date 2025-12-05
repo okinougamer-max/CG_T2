@@ -11,12 +11,12 @@ COLS, ROWS = 8, 8
 CELL_SIZE = 4.0 
 GRID_Y = 5.0 
 
-def get_world_pos(gx, gz):
+def getposition(gx, gz):
     wx = (gx - (COLS-1)/2.0) * CELL_SIZE
     wz = (gz - (ROWS-1)/2.0) * CELL_SIZE 
     return wx, GRID_Y, wz
 
-def desenhar_nave_triangulo(texture_id=None):
+def desenhar_nave(texture_id=None):
     glEnable(GL_TEXTURE_2D) if texture_id else glDisable(GL_TEXTURE_2D)
     if texture_id: glBindTexture(GL_TEXTURE_2D, texture_id)
     glColor3f(1, 1, 1)
@@ -133,7 +133,7 @@ def loop_jogo(display, duracao, nivel):
                 move_timer = 0
                 for m in meteoros:
                     m['x'] += m['dx']; m['z'] += m['dz']
-                    if m['x'] == ship_x and m['z'] == ship_z: state = "LOST"
+                    if m['x'] == ship_x and m['z'] == ship_z: state = "Derrota"
                 meteoros = [m for m in meteoros if -2 <= m['z'] <= ROWS+1 and -2 <= m['x'] <= COLS+1]
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -151,16 +151,16 @@ def loop_jogo(display, duracao, nivel):
         for i in range(ROWS+1): glVertex3f(st_x, GRID_Y, st_z+i*CELL_SIZE); glVertex3f(st_x+sx, GRID_Y, st_z+i*CELL_SIZE)
         glEnd()
 
-        if state != "LOST" or (now % 500 < 250):
-            nx, ny, nz = get_world_pos(ship_x, ship_z)
+        if state != "Derrota" or (now % 500 < 250):
+            nx, ny, nz = getposition(ship_x, ship_z)
             glPushMatrix()
             glTranslate(nx, ny + math.sin(tempo_fundo*0.1)*0.2, nz)
-            desenhar_nave_triangulo(tex_nave)
+            desenhar_nave(tex_nave)
             glPopMatrix()
 
         glEnable(GL_TEXTURE_2D) 
         for m in meteoros:
-            mx, my, mz = get_world_pos(m['x'], m['z'])
+            mx, my, mz = getposition(m['x'], m['z'])
             glPushMatrix()
             glTranslate(mx, my, mz)
             fundo.desenhar_esfera(1.0, tex_meteoro)
