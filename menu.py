@@ -39,7 +39,6 @@ def executar(display):
     clock = pygame.time.Clock()
     tempo_fundo, cx, cy = 0, display[0] // 2, display[1] // 2
     tempo_jogo, nivel_jogo = 15, 1
-    opcoes = ["JOGAR", "TEMPO", "NIVEL", "VISUALIZAR MAPA", "SAIR"]
     selecionado = 0
 
     while True:
@@ -54,7 +53,6 @@ def executar(display):
                 if event.key == K_UP:   selecionado = (selecionado - 1) % 5
                 if event.key == K_DOWN: selecionado = (selecionado + 1) % 5
                 
-                # Ajustes Laterais
                 delta = -1 if event.key == K_LEFT else (1 if event.key == K_RIGHT else 0)
                 if delta != 0:
                     if selecionado == 1: tempo_jogo = max(5, tempo_jogo + delta)

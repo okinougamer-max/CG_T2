@@ -4,7 +4,6 @@ from OpenGL.GLU import *
 import os
 from PIL import Image
 
-# Configurações do Sistema Solar
 PLANETAS = [
     {"nome": "Mercurio", "raio": 0.4, "dist": 6,  "vel": 4.5, "tex": "mercurio.jpg", "id": None},
     {"nome": "Venus",    "raio": 0.6, "dist": 9,  "vel": 3.5, "tex": "venus.png",   "id": None},
@@ -71,7 +70,7 @@ def desenhar_esfera(raio, tex_id):
 def desenhar_cenario(tempo):
     glPushMatrix()
     glEnable(GL_TEXTURE_2D)
-    glColor3f(1, 1, 1) # Reset cor
+    glColor3f(1, 1, 1)
 
     # Sol
     glPushMatrix()
@@ -80,7 +79,6 @@ def desenhar_cenario(tempo):
     glMaterialfv(GL_FRONT, GL_EMISSION, [0, 0, 0, 1])
     glPopMatrix()
 
-    # Planetas
     for p in PLANETAS:
         glPushMatrix() 
         glRotate((tempo * p["vel"]) % 360, 0, 1, 0)
@@ -98,7 +96,7 @@ def desenhar_cenario(tempo):
             desenhar_esfera(LUA_TERRA["raio"], LUA_TERRA["id"])
             glPopMatrix()
 
-        if p["nome"] == "Saturno": # Anéis
+        if p["nome"] == "Saturno": 
             glPushMatrix()
             glRotate(45, 1, 0, 0) 
             glEnable(GL_BLEND)

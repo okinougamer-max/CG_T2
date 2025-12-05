@@ -55,7 +55,6 @@ def visualizar_mapa(display):
 
         fundo.desenhar_cenario(tempo)
         
-        # Grade simples
         glDisable(GL_TEXTURE_2D); glColor3f(0, 1, 0)
         glBegin(GL_LINES)
         sz = ROWS * CELL_SIZE
@@ -92,20 +91,18 @@ def loop_jogo(display, duracao, nivel):
         
         if state == "jogando":
             time_left = max(0, duracao - int((now - start_t) / 1000.0))
-            if time_left == 0: state = "WON"
+            if time_left == 0: state = "Vitoria"
 
         for event in pygame.event.get():
             if event.type == QUIT: return False
             if event.type == KEYDOWN:
                 if state == "jogando":
-                    # Durante o jogo, ESC volta ao menu
                     if event.key == K_ESCAPE: return "MENU"
                     if event.key == K_LEFT and ship_x > 0: ship_x -= 1
                     if event.key == K_RIGHT and ship_x < COLS-1: ship_x += 1
                     if event.key == K_UP and ship_z > 0: ship_z -= 1
                     if event.key == K_DOWN and ship_z < ROWS-1: ship_z += 1
                 else:
-                    # Fim de jogo: ESC -> Menu, ENTER -> Reiniciar
                     if event.key == K_ESCAPE: return "MENU"
                     if event.key in (K_RETURN, K_KP_ENTER): return "RESTART"
 
@@ -113,7 +110,22 @@ def loop_jogo(display, duracao, nivel):
             if now - last_spawn > (800 if nivel < 3 else 400):
                 meteoros.append({'x': random.randint(0, COLS-1), 'z': ROWS, 'dx':0, 'dz':-1})
                 if nivel >= 2 and random.choice([True, False]):
-                    meteoros.append({'x': -1 if random.choice([0,1]) else COLS, 'z': random.randint(0, ROWS-1), 'dx': 1 if random.choice([0,1]) else -1, 'dz': 0})
+                    lado = random.choice([0, 1]) 
+                    
+                    if lado == 0: 
+                        start_x = -1
+                        move_x = 1
+                    else:         
+                        start_x = COLS
+                        move_x = -1
+                        
+                    meteoros.append({
+                        'x': start_x, 
+                        'z': random.randint(0, ROWS-1), 
+                        'dx': move_x, 
+                        'dz': 0
+                    })
+                
                 last_spawn = now
             
             move_timer += dt
@@ -131,7 +143,6 @@ def loop_jogo(display, duracao, nivel):
 
         fundo.desenhar_cenario(tempo_fundo)
         
-        # Grade
         glDisable(GL_TEXTURE_2D); glColor3f(0, 1, 0)
         glBegin(GL_LINES)
         sz, sx = ROWS * CELL_SIZE, COLS * CELL_SIZE
@@ -159,10 +170,10 @@ def loop_jogo(display, duracao, nivel):
         if state == "jogando":
             menu.desenhar_texto(f"Tempo: {time_left}s | Nivel: {nivel}", 10, display[1]-40, display)
         else:
-            # HUD de Fim de Jogo
+            # tela final
             cx, cy = display[0]//2, display[1]//2
-            msg = "VITORIA!" if state == "WON" else "GAME OVER"
-            c = (0, 255, 0, 255) if state == "WON" else (255, 0, 0, 255)
+            msg = "VITORIA!" if state == "Vitoria" else "GAME OVER"
+            c = (0, 255, 0, 255) if state == "Vitoria" else (255, 0, 0, 255)
             menu.desenhar_texto(msg, cx-80, cy+50, display, 60, c)
             menu.desenhar_texto("[ENTER] Jogar Novamente", cx-140, cy-20, display)
             menu.desenhar_texto("[ESC] Voltar ao Menu", cx-110, cy-60, display, 24, (200, 200, 200, 255))
