@@ -43,7 +43,7 @@ def executar(display):
     cx = largura // 2
 
     # Estado do Menu
-    tempo_jogo = 30  # Tempo padrão
+    tempo_jogo = 15  # Tempo padrão
     nivel_jogo = 1   # Nível padrão
     
     # Índices das opções

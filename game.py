@@ -74,6 +74,81 @@ def get_world_pos(gx, gz):
     wz = (gz - (ROWS-1)/2.0) * CELL_SIZE 
     return wx, GRID_Y_OFFSET, wz
 
+def desenhar_nave_b2():
+    """Desenha a nave com o formato de um B-2 Spirit."""
+    glDisable(GL_TEXTURE_2D)
+    glDisable(GL_LIGHTING) # Desativa luz para controlar as cores manualmente
+    
+    # Coordenadas relativas para o B-2
+    # Z negativo é a frente da nave
+    nose = (0.0, 0.0, -1.8)
+    wing_left = (-2.5, 0.0, 1.2)
+    wing_right = (2.5, 0.0, 1.2)
+    tail_center = (0.0, 0.0, 0.6)
+    tail_left_inner = (-0.8, 0.0, 0.8)
+    tail_right_inner = (0.8, 0.0, 0.8)
+    
+    # --- Corpo Principal (Cinzento Escuro) ---
+    glColor3f(0.3, 0.3, 0.35) # Cinzento azulado escuro
+    glBegin(GL_TRIANGLES)
+    
+    # Asa Esquerda
+    glVertex3fv(nose)
+    glVertex3fv(wing_left)
+    glVertex3fv(tail_left_inner)
+    
+    # Asa Direita
+    glVertex3fv(nose)
+    glVertex3fv(tail_right_inner)
+    glVertex3fv(wing_right)
+    
+    # Fuselagem Central
+    glVertex3fv(nose)
+    glVertex3fv(tail_left_inner)
+    glVertex3fv(tail_center)
+    
+    glVertex3fv(nose)
+    glVertex3fv(tail_center)
+    glVertex3fv(tail_right_inner)
+    glEnd()
+
+    # --- Cockpit (Preto/Vidro) ---
+    # Pequena elevação no centro
+    glColor3f(0.1, 0.1, 0.1)
+    glBegin(GL_TRIANGLES)
+    glVertex3f(0.0, 0.25, -0.5)  # Topo do cockpit
+    glVertex3f(-0.3, 0.0, 0.2)
+    glVertex3f(0.3, 0.0, 0.2)
+    
+    glVertex3f(0.0, 0.25, -0.5)
+    glVertex3f(0.3, 0.0, 0.2)
+    glVertex3f(0.0, 0.0, -1.0) # Conecta mais à frente
+    
+    glVertex3f(0.0, 0.25, -0.5)
+    glVertex3f(0.0, 0.0, -1.0)
+    glVertex3f(-0.3, 0.0, 0.2)
+    glEnd()
+
+    # --- Motores / Exaustores (Brilho Vermelho) ---
+    # Para ser visível no espaço preto
+    glColor3f(1.0, 0.2, 0.0) 
+    glBegin(GL_QUADS)
+    # Motor Esquerdo
+    glVertex3f(-0.6, 0.05, 0.8)
+    glVertex3f(-0.4, 0.05, 0.8)
+    glVertex3f(-0.4, 0.05, 0.9)
+    glVertex3f(-0.6, 0.05, 0.9)
+    
+    # Motor Direito
+    glVertex3f(0.4, 0.05, 0.8)
+    glVertex3f(0.6, 0.05, 0.8)
+    glVertex3f(0.6, 0.05, 0.9)
+    glVertex3f(0.4, 0.05, 0.9)
+    glEnd()
+    
+    glEnable(GL_LIGHTING)
+    glEnable(GL_TEXTURE_2D)
+
 # ================= MODO: VISUALIZAR MAPA =================
 def visualizar_mapa(display):
     clock = pygame.time.Clock()
@@ -119,10 +194,8 @@ def visualizar_mapa(display):
 # ================= LOOP DO JOGO =================
 def loop_jogo(display, duracao_segundos, nivel):
     # IDs de texturas
-    tex_nave = None
     tex_meteoro = None
     for p in fundo.PLANETAS:
-        if p["nome"] == "Terra": tex_nave = p["tex_id"]
         if p["nome"] == "Marte": tex_meteoro = p["tex_id"]
 
     # Loop de Reinício (Jogar Novamente)
@@ -231,13 +304,20 @@ def loop_jogo(display, duracao_segundos, nivel):
             fundo.desenhar_cenario(tempo_fundo)
             desenhar_grade()
             
-            # Nave
+            # Nave (AGORA DESENHADA COMO UM B-2 SPIRIT)
             if game_state != "LOST" or (pygame.time.get_ticks() % 500 < 250):
                 nx, ny, nz = get_world_pos(ship_x, ship_z)
                 glPushMatrix()
                 glTranslate(nx, ny, nz)
+                
+                # Pequena inclinação lateral ao mover (opcional, visual)
+                # Inclina a nave para simular curva
+                keys = pygame.key.get_pressed()
+                if keys[K_LEFT]: glRotate(15, 0, 0, 1)
+                if keys[K_RIGHT]: glRotate(-15, 0, 0, 1)
+                
                 glTranslate(0, math.sin(tempo_fundo*0.1)*0.2, 0) 
-                fundo.desenhar_esfera_texturizada(1.2, tex_nave)
+                desenhar_nave_b2()
                 glPopMatrix()
 
             # Meteoros
