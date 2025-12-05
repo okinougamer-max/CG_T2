@@ -74,6 +74,28 @@ def get_world_pos(gx, gz):
     wz = (gz - (ROWS-1)/2.0) * CELL_SIZE 
     return wx, GRID_Y_OFFSET, wz
 
+def desenhar_nave_triangulo():
+    """Desenha a nave como um triangulo simples."""
+    glDisable(GL_TEXTURE_2D) # Desativa texturas para usar cor solida
+    glDisable(GL_LIGHTING)   # Desativa luz para a cor ficar brilhante (opcional)
+    
+    glBegin(GL_TRIANGLES)
+    glColor3f(0.0, 1.0, 1.0) # Cor Ciano (R, G, B)
+    
+    # Vertice frontal (Ponta da nave)
+    glVertex3f(0.0, 0.0, -1.5)
+    
+    # Vertice traseiro esquerdo
+    glVertex3f(-1.0, 0.0, 1.5)
+    
+    # Vertice traseiro direito
+    glVertex3f(1.0, 0.0, 1.5)
+    
+    glEnd()
+    
+    glEnable(GL_LIGHTING)    # Restaura iluminacao
+    glEnable(GL_TEXTURE_2D)  # Restaura texturas
+
 # ================= MODO: VISUALIZAR MAPA =================
 def visualizar_mapa(display):
     clock = pygame.time.Clock()
@@ -118,11 +140,9 @@ def visualizar_mapa(display):
 
 # ================= LOOP DO JOGO =================
 def loop_jogo(display, duracao_segundos, nivel):
-    # IDs de texturas
-    tex_nave = None
+    # IDs de texturas (apenas meteoro sera usado agora)
     tex_meteoro = None
     for p in fundo.PLANETAS:
-        if p["nome"] == "Terra": tex_nave = p["tex_id"]
         if p["nome"] == "Marte": tex_meteoro = p["tex_id"]
 
     # Loop de Reinício (Jogar Novamente)
@@ -231,13 +251,14 @@ def loop_jogo(display, duracao_segundos, nivel):
             fundo.desenhar_cenario(tempo_fundo)
             desenhar_grade()
             
-            # Nave
+            # Nave (AGORA DESENHADA COMO UM TRIANGULO)
             if game_state != "LOST" or (pygame.time.get_ticks() % 500 < 250):
                 nx, ny, nz = get_world_pos(ship_x, ship_z)
                 glPushMatrix()
                 glTranslate(nx, ny, nz)
                 glTranslate(0, math.sin(tempo_fundo*0.1)*0.2, 0) 
-                fundo.desenhar_esfera_texturizada(1.2, tex_nave)
+                # fundo.desenhar_esfera_texturizada(1.2, tex_nave) # Antigo
+                desenhar_nave_triangulo() # Novo
                 glPopMatrix()
 
             # Meteoros
