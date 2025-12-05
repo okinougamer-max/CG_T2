@@ -70,7 +70,7 @@ def executar(display):
         gluLookAt(0, 30, 60, 0, 0, 0, 0, 1, 0)
         
         fundo.desenhar_cenario(tempo_fundo)
-        desenhar_texto("SPACE DODGE", cx - 180, display[1] - 150, display, 70, (255, 200, 50, 255))
+        desenhar_texto("meteoros fall", cx - 180, display[1] - 150, display, 70, (255, 200, 50, 255))
         
         textos = [
             "JOGAR", f"< TEMPO: {tempo_jogo}s >", f"< NIVEL: {nivel_jogo} >",
